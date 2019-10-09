@@ -1,0 +1,263 @@
+---
+title: "Assignment 5"
+author: "Kyle Walker"
+date: "9/30/2019"
+output: html_document
+---
+
+### Assignment 5. Data Visualization with ggplot2
+#### Submission Instruction. You will need to submit on Blackboard, in the Assignment section, a link to your assignment on your Github Webpage. Following this to create a github webpage and posted a link to your assignment. This assignment works with the c2015 dataset.
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(stringr)
+c2015 <- read_excel("C:/Users/student/Documents/Senior Year/MATH 421/Assignment 2/c2015.xlsx")
+```
+
+#### 1. Clean the data for easy graphing. Do the follows to clean and reduce the size of the data. 
+##### Remove all observations that have a cell being either (1) NA, (2)‘Unknown’, (3)‘Not Rep’, or (4)‘Not Reported’
+##### Remove all observations that have a cell containing either (1)‘Unknown’, (2)‘Not Rep’, or (3)‘Not Reported’. For instance, observations with DRINKING variable being Unknown (Police Reported) will be removed.
+##### Fix TRAV_SP and AGE (following previous assignments) so that they are both numerics.
+##### Filter so that there are only drivers in the data
+```{r}
+#Fixing Sex
+c2015$SEX[is.na(c2015$SEX)]<- "Female"
+#Fixing Age
+c2015$AGE[c2015$AGE == 'Less than 1'] <- "0"
+c2015$AGE <- as.numeric(c2015$AGE)
+c2015$AGE[is.na(c2015$AGE)] <- mean(c2015$AGE)
+#Fixing Trav_Sp
+c2015$TRAV_SP <- str_replace(c2015$TRAV_SP, " MPH", "")
+c2015$TRAV_SP <- str_replace(c2015$TRAV_SP, "Not Rep", "")
+c2015$TRAV_SP <- str_replace(c2015$TRAV_SP, "Unknown", "")
+c2015$TRAV_SP <- as.numeric(c2015$TRAV_SP)
+c2015 = c2015[!(is.na(c2015$TRAV_SP)),]
+#Getting rid of missing data
+c2015 = c2015 %>%
+  filter_all(~!is.na(.))
+c2015 = c2015 %>%
+  filter_all(~!(.=="Unknown"))
+c2015 = c2015 %>%
+  filter_all(~!(.=="Not Rep"))
+c2015 = c2015 %>%
+  filter_all(~!(.=="Not Reported"))
+c2015 = c2015 %>%
+  filter_all(~!(.==str_detect(.,"Not Rep")))
+c2015 = c2015 %>%
+  filter_all(~!(.==str_detect(.,"Unknown")))
+c2015 = c2015 %>%
+  filter(SEAT_POS == 'Front Seat, Left Side')
+```
+
+#### 2. Use geom_point to plot AGE and TRAV_SP coloring by SEX.
+```{r}
+ggplot(c2015, aes(x=AGE, y=TRAV_SP, col=SEX)) + geom_point()
+```
+
+#### 3. There is overplotting in 2. Overplotting is when many points are duplicated on the graph. Use geom_jitter instead of geom_point for 2. to avoid overplotting.
+```{r}
+ggplot(c2015, aes(x=AGE, y=TRAV_SP, col=SEX)) + geom_jitter()
+```
+
+#### 4. Plot histograms of AGE, TRAV_SP with bins = 50.
+```{r}
+ggplot(c2015, aes(x=AGE)) + geom_histogram(bins=50)
+ggplot(c2015, aes(x=TRAV_SP)) + geom_histogram(bins=50)
+```
+
+#### 5. Plot a histogram of AGE coloring (fill) by SEX.
+```{r}
+ggplot(c2015, aes(x=AGE, fill=SEX)) + geom_histogram()
+```
+
+#### 6. Using geom_density to plot estimated densities of AGE colored by SEX.
+```{r}
+ggplot(c2015, aes(AGE, col=SEX)) + geom_density()
+```
+
+#### 7. Plot estimated densities of TRAV_SP colored by INJ_SEV.
+```{r}
+ggplot(c2015, aes(TRAV_SP, col = INJ_SEV)) + geom_density()
+```
+
+#### 8. Plot estimated densities of TRAV_SP seperated (colored) by weekdays and weekends.
+```{r}
+c2015 <- c2015 %>% 
+  mutate(Weekend = case_when(
+    DAY_WEEK %in% c("Saturday", "Sunday") ~ "Weekend",
+    TRUE ~ "Weekday")
+  )
+ggplot(c2015, aes(TRAV_SP, col= Weekend)) + geom_density()
+```
+
+#### 9. Implement geom_bar on MONTH. Implement geom_bar on MONTH filled by SEX
+```{r}
+ggplot(c2015, aes(x=MONTH)) + geom_bar()
+ggplot(c2015, aes(x=MONTH, fill=SEX)) + geom_bar()
+```
+
+#### 10. Implement geom_bar on MONTH and SEX with position='dodge'
+```{r}
+ggplot(c2015, aes(x=MONTH)) + geom_bar(position = "dodge")
+ggplot(c2015, aes(x=SEX)) + geom_bar(position = "dodge")
+```
+
+#### 11. Plot a bar chart of average speeds in months using geom_col
+```{r}
+avgMSpd <- c2015 %>% 
+  group_by(MONTH) %>% 
+   summarize(AvgSpd = mean(TRAV_SP))
+avgMSpd
+ggplot(avgMSpd, aes(x=MONTH, y=AvgSpd)) + geom_col()
+```
+
+#### 12. Plot a bar chart of average speeds in months using geom_bar
+```{r}
+ggplot(avgMSpd, aes(x=MONTH, y=AvgSpd)) + geom_bar(stat = 'identity')
+
+
+```
+
+#### 13. Plot a bar chart of average speeds in months filled by SEX
+```{r}
+SpdSex <- c2015 %>% 
+  group_by(MONTH, SEX) %>% 
+    summarize(AvgSpd = mean(TRAV_SP))
+SpdSex
+ggplot(SpdSex, aes(x=MONTH, y=AvgSpd, fill=SEX)) + geom_bar(stat= "identity")
+```
+
+#### 14. Plot a bar chart of average speeds in months colored by INJ_SEV
+```{r}
+SpdSev <- c2015 %>% 
+  group_by(MONTH, INJ_SEV) %>% 
+    summarize(AvgSpd = mean(TRAV_SP))
+SpdSev
+ggplot(SpdSev, aes(x=MONTH, y=AvgSpd, fill=INJ_SEV)) + geom_bar(stat= "identity")
+```
+
+
+#### 15. Refer to this link to have a similar following plot:
+
+##### Horizontal axis is for (monthly) average speed
+##### The vertical axis is for months
+##### Color by two colors: one for above overall average speed and the other for below the avarage speed
+##### The speed on the horizontal axis is standardized
+```{r}
+cum_mean <- mean(c2015$TRAV_SP)
+cum_sd <- sd(c2015$TRAV_SP)
+gph15 <- c2015 %>%
+  group_by(MONTH) %>% 
+     summarize(spd_z = round(((mean(TRAV_SP,na.rm=T)- cum_mean) / cum_sd),2)) %>% 
+       mutate(type = ifelse(spd_z > 0 , "above", "below")) %>% 
+         arrange(spd_z)
+
+ggplot(gph15, aes(x=reorder(MONTH,spd_z), y=spd_z, label = spd_z)) +
+  geom_bar(stat='identity', aes(fill = type, width=0.5)) +
+    scale_fill_manual(name = "Average Speed",
+                      labels = c("Above Average" , "Below Average"),
+                      values = c("above" = "#00ba38", "below" = "#f8766d")) +
+  labs(subtitle = "Normalized Average Speed per Month",
+       title = "Diverging Bars",
+       x= "Month",
+       y= "Normalized Speed") +
+  coord_flip()
+
+```
+
+
+#### 16. Refer to this link to have a similar following plot:
+##### Horizontal Axis is for mean speed
+##### Vertical Axis is for INJ_SEV
+##### Color by SEX
+##### The numbers of speed are shown in points.
+```{r}
+gph16 <- c2015 %>% 
+  group_by(INJ_SEV, SEX) %>% 
+    summarize(spd= round(mean(TRAV_SP),2))
+
+ggplot(gph16, aes(x=reorder(INJ_SEV,spd), y=spd, label = spd)) +
+  geom_point(stat='identity', aes(col = SEX), size=9) +
+    scale_color_manual(name = "Sex",
+                      labels = c("Male" , "Female"),
+                      values = c("Male" = "blue", "Female" = "red")) +
+  geom_text(color="white", size=2) +
+  labs(subtitle = "Average Speed per Month",
+       title = "Diverging Dot Plot",
+       x= "Injury Severity",
+       y= "Mean Speed") +
+  coord_flip()
+```
+
+
+#### 18. Refer to this link to have a similar following plot:
+##### Horizontal Axis is for speed
+##### Vertical Axis is for DAY
+##### Color by SEX
+##### The should be a invisible vertical line seperating the two sexes.
+```{r}
+brks <- seq(-60,60,10)
+lbls <- paste0(as.character(c(seq(60,0,-10), seq(10,60,10))), "mph")
+
+
+c2015 %>% 
+  group_by(DAY, SEX) %>% 
+    summarize(avg= round((mean(TRAV_SP, na.rm=T)),2)) %>%
+      mutate(avg = ifelse(SEX == "Female",-avg, avg)) %>%
+        ggplot(aes(x=reorder(DAY, avg), y= avg, fill= SEX)) +
+        geom_bar(stat='identity', width=0.6) +
+        scale_y_continuous(breaks = brks,
+                           labels = lbls) +
+        coord_flip() +
+        labs(title= "Speed by Day and Sex",
+             y = "Average Speed",
+             x = "Day of the Month") +
+        theme(plot.title = element_text(hjust= 0.5),
+              axis.ticks = element_blank())
+```
+
+
+#### 18-20. Generate three other interesting graphs from the dataset.
+```{r}
+library(ggfortify)
+theme_set(theme_classic())
+
+ts <- c2015 %>% 
+  group_by(DAY) %>% 
+    summarize(avgSpd = mean(TRAV_SP))
+
+ggplot(ts, aes(x=DAY)) +
+  geom_line(aes(y=avgSpd)) +
+  labs(title= "Travel Speed") +
+  theme(plot.title = element_text(hjust= 0.5))
+
+```
+
+```{r}
+ggplot(c2015, aes(SEX, AGE)) +
+  geom_boxplot(varwidth = T, fill = "light blue") +
+  labs(title = "Age by Sex",
+       x = "Sex",
+       y= "Age")
+```
+
+```{r}
+library(ggcorrplot)
+
+c2015_n <- c2015 %>% 
+  select_if(is.numeric) %>% 
+    select(-"YEAR")
+
+corr <- round(cor(c2015_n),1)
+
+ggcorrplot(corr, hc.order = T,
+       type = "lower",
+       lab = T,
+       lab_size = 3,
+       method = "circle",
+       colors = c("tomato2", "white", "springgreen3"),
+       title = "Correlogram of c2015",
+       ggtheme = theme_bw)
+```
+
